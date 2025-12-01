@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumi - Soft | Status Bot Realtime</title>
+    <meta name="description" content="Status dan informasi real-time dari bot WhatsApp Lumi - Soft.">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-green': '#2ecc71',
+                        'dark-text': '#2c3e50',
+                        'bg-light': '#ecf0f1',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+    </style>
+</head>
+<body class="bg-bg-light text-dark-text min-h-screen font-sans">
+
+    <div id="app" class="container mx-auto p-4 sm:p-8">
+
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-500 to-primary-green text-white p-6 sm:p-10 rounded-xl shadow-lg mb-8 text-center">
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">🤖 Lumi - Soft Panel Status</h1>
+            <p class="mt-2 text-sm sm:text-base opacity-90">Pemantauan Statistik Real-Time Bot WhatsApp</p>
+        </header>
+
+        <!-- Status Uptime & API Check -->
+        <div id="uptime-indicator" class="p-4 rounded-lg font-bold text-center shadow-md transition-colors duration-300 bg-yellow-400 text-white mb-8">
+            Memuat Status Bot...
+        </div>
+
+        <!-- Grid Statistik -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Kecepatan Bot -->
+            <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 border-t-4 border-primary-green">
+                <h3 class="text-lg font-semibold text-gray-600 mb-2 flex items-center">
+                    <span class="text-2xl mr-2">⚡</span> Speed Respon
+                </h3>
+                <p id="avgResponseTime" class="text-4xl font-bold text-dark-text">--</p>
+                <small class="text-gray-500 block mt-1">Waktu rata-rata bot merespon perintah.</small>
+            </div>
+            
+            <!-- Total Pengguna -->
+            <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 border-t-4 border-blue-500">
+                <h3 class="text-lg font-semibold text-gray-600 mb-2 flex items-center">
+                    <span class="text-2xl mr-2">👥</span> Total User DB
+                </h3>
+                <p id="totalUsers" class="text-4xl font-bold text-dark-text">--</p>
+                <small class="text-gray-500 block mt-1">Jumlah pengguna yang terdaftar di database.</small>
+            </div>
+            
+            <!-- Total Perintah -->
+            <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 border-t-4 border-purple-500">
+                <h3 class="text-lg font-semibold text-gray-600 mb-2 flex items-center">
+                    <span class="text-2xl mr-2">🚀</span> Total Perintah
+                </h3>
+                <p id="commandsExecuted" class="text-4xl font-bold text-dark-text">--</p>
+                <small class="text-gray-500 block mt-1">Perintah berhasil dieksekusi sejak bot dibuat.</small>
+            </div>
+            
+            <!-- Chat Aktif -->
+            <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 border-t-4 border-red-500">
+                <h3 class="text-lg font-semibold text-gray-600 mb-2 flex items-center">
+                    <span class="text-2xl mr-2">💬</span> Chat Aktif
+                </h3>
+                <p id="activeChats" class="text-4xl font-bold text-dark-text">--</p>
+                <small class="text-gray-500 block mt-1">Jumlah grup dan chat pribadi yang aktif.</small>
+            </div>
+        </section>
+
+        <!-- Informasi Sistem -->
+        <section class="mt-8">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2 text-dark-text">💻 Informasi Sistem (Pterodactyl)</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                
+                <!-- CPU Load -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">CPU Load (1 Menit Rata-rata)</h3>
+                    <p id="cpuLoad" class="text-2xl font-bold text-dark-text">--</p>
+                    <small class="text-gray-500 block mt-1">Beban CPU kontainer bot.</small>
+                </div>
+
+                <!-- RAM Usage -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">Penggunaan RAM</h3>
+                    <p id="memoryUsed" class="text-2xl font-bold text-dark-text">--</p>
+                    <small class="text-gray-500 block mt-1">RAM yang digunakan bot/server.</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 py-4 text-gray-500 text-sm border-t border-gray-300">
+            <p>&copy; 2025 Lumi - Soft. Ditenagai oleh Node.js & Netlify.</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript untuk Fetching Data Real-Time -->
+    <script>
+        // URL API yang diambil dari Pterodactyl Anda (Hostname: server.xyro.site, Port: 4025)
+        const BOT_API_URL = "http://server.xyro.site:4025/status"; 
+        
+        const uptimeElement = document.getElementById('uptime-indicator');
+
+        // Fungsi untuk mengonversi detik menjadi format Hari/Jam/Menit/Detik
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / (60 * 60 * 24));
+            const hours = Math.floor((seconds % (60 * 60 * 24)) / (60 * 60));
+            const minutes = Math.floor((seconds % (60 * 60)) / 60);
+            const remainingSeconds = seconds % 60;
+            return `✅ Bot Aktif Selama: ${days} Hari, ${hours} Jam, ${minutes} Menit, ${remainingSeconds} Detik`;
+        }
+
+        // Fungsi untuk mengambil data dari API bot
+        async function fetchBotStatus() {
+            try {
+                // Gunakan 3 kali percobaan (Retry) dengan exponential backoff jika gagal
+                let response;
+                let data = null;
+                const maxRetries = 3;
+
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        response = await fetch(BOT_API_URL, { signal: AbortSignal.timeout(5000) }); // Timeout 5s
+                        if (response.ok) {
+                            data = await response.json();
+                            break; // Keluar dari loop jika berhasil
+                        }
+                    } catch (e) {
+                        if (i < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000)); // Backoff
+                        } else {
+                            throw new Error("Gagal terhubung ke API setelah beberapa kali coba.");
+                        }
+                    }
+                }
+                
+                if (!data) throw new Error("Gagal memproses data dari API.");
+
+                // 1. Uptime Indicator
+                uptimeElement.textContent = formatUptime(data.uptimeSeconds);
+                uptimeElement.classList.remove('bg-yellow-400', 'bg-red-500');
+                uptimeElement.classList.add('bg-primary-green');
+                
+                // 2. Statistik Bot
+                document.getElementById('avgResponseTime').textContent = data.stats.avgResponseTime;
+                document.getElementById('totalUsers').textContent = data.stats.totalUsers.toLocaleString('id-ID');
+                document.getElementById('commandsExecuted').textContent = data.stats.commandsExecuted.toLocaleString('id-ID');
+                document.getElementById('activeChats').textContent = data.stats.activeChats.toLocaleString('id-ID');
+                
+                // 3. Status Sistem
+                document.getElementById('cpuLoad').textContent = data.system.cpuLoad;
+                document.getElementById('memoryUsed').textContent = data.system.memoryUsed;
+
+            } catch (error) {
+                console.error("Gagal mengambil data bot:", error);
+                uptimeElement.textContent = "❌ Bot Offline atau API Tidak Dapat Diakses. Cek Koneksi Pterodactyl.";
+                uptimeElement.classList.remove('bg-yellow-400', 'bg-primary-green');
+                uptimeElement.classList.add('bg-red-500');
+                
+                // Reset semua field ke status error
+                document.getElementById('avgResponseTime').textContent = "ERROR";
+                document.getElementById('totalUsers').textContent = "ERROR";
+                document.getElementById('commandsExecuted').textContent = "ERROR";
+                document.getElementById('activeChats').textContent = "ERROR";
+                document.getElementById('cpuLoad').textContent = "ERROR";
+                document.getElementById('memoryUsed').textContent = "ERROR";
+            }
+        }
+
+        // Panggil fungsi sekali saat load, dan ulangi setiap 5 detik
+        fetchBotStatus(); 
+        setInterval(fetchBotStatus, 5000); 
+    </script>
+</body>
+</html>
+
